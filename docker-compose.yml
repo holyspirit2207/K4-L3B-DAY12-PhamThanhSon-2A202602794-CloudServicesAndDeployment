@@ -35,10 +35,27 @@ services:
       timeout: 3s
       retries: 5
 
-  # TODO (CP2): khai báo service `agent` ở đây
-  # agent:
-  #   build: .
-  #   ...
+  agent:
+    build: .
+    image: day12-agent:prod
+    ports:
+      - "8000:8000"
+    environment:
+      # Nội suy từ file .env cạnh compose; thiếu biến → compose báo lỗi ngay
+      - AGENT_API_KEY=${AGENT_API_KEY:?AGENT_API_KEY chưa được set trong .env}
+      # Trong mạng compose, tên service `redis` chính là hostname
+      - REDIS_URL=redis://redis:6379/0
+      - PORT=8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
 
 volumes:
   redis-data:
